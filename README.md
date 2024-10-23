@@ -236,6 +236,19 @@ export SENSEVOICE_DEVICE=cuda:0
 fastapi run --port 50000
 ```
 
+## Run with OpenAI API
+
+```shell
+## run server
+python openai-api.py
+
+## test by curl
+curl http://127.0.0.1:8000/v1/audio/transcriptions \
+  -H "Content-Type: multipart/form-data" \
+  -F model="iic/SenseVoiceSmall" \
+  -F file="@path/to/audiofile.mp3"
+```
+
 ## Finetune
 
 ### Requirements
