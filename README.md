@@ -1,15 +1,12 @@
 ([简体中文](./README_zh.md)|English|[日本語](./README_ja.md))
 
-
 # Introduction
 
-SenseVoice is a speech foundation model with multiple speech understanding capabilities, including automatic speech recognition (ASR),  spoken language identification (LID), speech emotion recognition (SER), and audio event detection (AED). 
+SenseVoice is a speech foundation model with multiple speech understanding capabilities, including automatic speech recognition (ASR),  spoken language identification (LID), speech emotion recognition (SER), and audio event detection (AED).
 
 <div align="center">  
 <img src="image/sensevoice2.png">
 </div>
-
-[//]: # (<div align="center"><img src="image/sensevoice.png" width="700"/> </div>)
 
 <div align="center">  
 <h4>
@@ -27,32 +24,37 @@ Model Zoo:
 Online Demo:
 [modelscope demo](https://www.modelscope.cn/studios/iic/SenseVoice), [huggingface space](https://huggingface.co/spaces/FunAudioLLM/SenseVoice)
 
-
 </div>
 
+`<a name="Highligts"></a>`
 
-<a name="Highligts"></a>
 # Highlights 🎯
+
 **SenseVoice** focuses on high-accuracy multilingual speech recognition, speech emotion recognition, and audio event detection.
+
 - **Multilingual Speech Recognition:** Trained with over 400,000 hours of data, supporting more than 50 languages, the recognition performance surpasses that of the Whisper model.
-- **Rich transcribe:** 
+- **Rich transcribe:**
   - Possess excellent emotion recognition capabilities, achieving and surpassing the effectiveness of the current best emotion recognition models on test data.
   - Offer sound event detection capabilities, supporting the detection of various common human-computer interaction events such as bgm, applause, laughter, crying, coughing, and sneezing.
 - **Efficient Inference:** The SenseVoice-Small model utilizes a non-autoregressive end-to-end framework, leading to exceptionally low inference latency. It requires only 70ms to process 10 seconds of audio, which is 15 times faster than Whisper-Large.
 - **Convenient Finetuning:** Provide convenient finetuning scripts and strategies, allowing users to easily address long-tail sample issues according to their business scenarios.
 - **Service Deployment:** Offer service deployment pipeline,  supporting multi-concurrent requests, with client-side languages including Python, C++, HTML, Java, and C#, among others.
 
-<a name="What's News"></a>
+`<a name="What's News"></a>`
+
 # What's New 🔥
+
 - 2024/7: Added Export Features for [ONNX](./demo_onnx.py) and [libtorch](./demo_libtorch.py), as well as Python Version Runtimes: [funasr-onnx-0.4.0](https://pypi.org/project/funasr-onnx/), [funasr-torch-0.1.1](https://pypi.org/project/funasr-torch/)
-- 2024/7: The [SenseVoice-Small](https://www.modelscope.cn/models/iic/SenseVoiceSmall) voice understanding model is open-sourced, which offers high-precision multilingual speech recognition, emotion recognition, and audio event detection capabilities for Mandarin, Cantonese, English, Japanese, and Korean and leads to exceptionally low inference latency.  
+- 2024/7: The [SenseVoice-Small](https://www.modelscope.cn/models/iic/SenseVoiceSmall) voice understanding model is open-sourced, which offers high-precision multilingual speech recognition, emotion recognition, and audio event detection capabilities for Mandarin, Cantonese, English, Japanese, and Korean and leads to exceptionally low inference latency.
 - 2024/7: The CosyVoice for natural speech generation with multi-language, timbre, and emotion control. CosyVoice excels in multi-lingual voice generation, zero-shot voice generation, cross-lingual voice cloning, and instruction-following capabilities. [CosyVoice repo](https://github.com/FunAudioLLM/CosyVoice) and [CosyVoice space](https://www.modelscope.cn/studios/iic/CosyVoice-300M).
 - 2024/7: [FunASR](https://github.com/modelscope/FunASR) is a fundamental speech recognition toolkit that offers a variety of features, including speech recognition (ASR), Voice Activity Detection (VAD), Punctuation Restoration, Language Models, Speaker Verification, Speaker Diarization and multi-talker ASR.
 
-<a name="Benchmarks"></a>
+`<a name="Benchmarks"></a>`
+
 # Benchmarks 📝
 
 ## Multilingual Speech Recognition
+
 We compared the performance of multilingual speech recognition between SenseVoice and Whisper on open-source benchmark datasets, including AISHELL-1, AISHELL-2, Wenetspeech, LibriSpeech, and Common Voice. In terms of Chinese and Cantonese recognition, the SenseVoice-Small model has advantages.
 
 <div align="center">  
@@ -83,12 +85,11 @@ Although trained exclusively on speech data, SenseVoice can still function as a 
 
 ## Computational  Efficiency
 
-The SenseVoice-Small model deploys a non-autoregressive end-to-end architecture, resulting in extremely low inference latency. With a similar number of parameters to the Whisper-Small model, it infers more than 5 times faster than Whisper-Small and 15 times faster than Whisper-Large. 
+The SenseVoice-Small model deploys a non-autoregressive end-to-end architecture, resulting in extremely low inference latency. With a similar number of parameters to the Whisper-Small model, it infers more than 5 times faster than Whisper-Small and 15 times faster than Whisper-Large.
 
 <div align="center">  
 <img src="image/inference.png" width="1000" />
 </div>
-
 
 # Requirements
 
@@ -96,7 +97,8 @@ The SenseVoice-Small model deploys a non-autoregressive end-to-end architecture,
 pip install -r requirements.txt
 ```
 
-<a name="Usage"></a>
+`<a name="Usage"></a>`
+
 # Usage
 
 ## Inference
@@ -113,7 +115,7 @@ model_dir = "iic/SenseVoiceSmall"
 model = AutoModel(
     model=model_dir,
     trust_remote_code=True,
-    remote_code="./model.py",    
+    remote_code="./model.py",  
     vad_model="fsmn-vad",
     vad_kwargs={"max_single_segment_time": 30000},
     device="cuda:0",
@@ -145,9 +147,11 @@ print(text)
 - `batch_size_s`: Indicates the use of dynamic batching, where the total duration of audio in the batch is measured in seconds (s).
 - `merge_vad`: Whether to merge short audio fragments segmented by the VAD model, with the merged length being `merge_length_s`, in seconds (s).
 - `ban_emo_unk`: Whether to ban the output of the `emo_unk` token.
+
 </details>
 
 If all inputs are short audios (<30s), and batch inference is needed to speed up inference efficiency, the VAD model can be removed, and `batch_size` can be set accordingly.
+
 ```python
 model = AutoModel(model=model_dir, trust_remote_code=True, device="cuda:0")
 
@@ -187,9 +191,11 @@ print(text)
 ```
 
 ### Export and Test
+
 <details><summary>ONNX and Libtorch Export</summary>
 
 #### ONNX
+
 ```python
 # pip3 install -U funasr funasr-onnx
 from pathlib import Path
@@ -207,9 +213,11 @@ wav_or_scp = ["{}/.cache/modelscope/hub/{}/example/en.mp3".format(Path.home(), m
 res = model(wav_or_scp, language="auto", use_itn=True)
 print([rich_transcription_postprocess(i) for i in res])
 ```
+
 Note: ONNX model is exported to the original model directory.
 
 #### Libtorch
+
 ```python
 from pathlib import Path
 from funasr_torch import SenseVoiceSmall
@@ -225,12 +233,15 @@ wav_or_scp = ["{}/.cache/modelscope/hub/{}/example/en.mp3".format(Path.home(), m
 res = model(wav_or_scp, language="auto", use_itn=True)
 print([rich_transcription_postprocess(i) for i in res])
 ```
+
 Note: Libtorch model is exported to the original model directory.
+
 </details>
 
 ## Service
 
 ### Deployment with FastAPI
+
 ```shell
 export SENSEVOICE_DEVICE=cuda:0
 fastapi run --port 50000
@@ -245,7 +256,7 @@ python openai-api.py
 ## test by curl
 curl http://127.0.0.1:8000/v1/audio/transcriptions \
   -H "Content-Type: multipart/form-data" \
-  -F model="iic/SenseVoiceSmall" \
+  -F timestamp="true" \
   -F file="@path/to/audiofile.mp3"
 ```
 
@@ -272,6 +283,7 @@ Full ref to `data/train_example.jsonl`
 <details><summary>Data Prepare Details</summary>
 
 Description：
+
 - `key`: audio file unique ID
 - `source`：path to the audio file
 - `source_len`：number of fbank frames of the audio file
@@ -282,9 +294,7 @@ Description：
 - `event_target`：event label of the audio file
 - `with_or_wo_itn`：whether includes punctuation and inverse text normalization
 
-
 `train_text.txt`
-
 
 ```bash
 BAC009S0764W0121 甚至出现交易几乎停滞的情况
@@ -294,8 +304,6 @@ ID0012W0014 he tried to think how it could be
 ```
 
 `train_wav.scp`
-
-
 
 ```bash
 BAC009S0764W0121 https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/BAC009S0764W0121.wav
@@ -317,7 +325,7 @@ ID0012W0014 <|en|>
 
 `train_emo.txt`
 
-The emotion labels include`<|HAPPY|>`、`<|SAD|>`、`<|ANGRY|>`、`<|NEUTRAL|>`、`<|FEARFUL|>`、`<|DISGUSTED|>` and `<|SURPRISED|>`.
+The emotion labels include `<|HAPPY|>`、`<|SAD|>`、`<|ANGRY|>`、`<|NEUTRAL|>`、`<|FEARFUL|>`、`<|DISGUSTED|>` and `<|SURPRISED|>`.
 
 ```bash
 BAC009S0764W0121 <|NEUTRAL|>
@@ -328,7 +336,7 @@ ID0012W0014 <|NEUTRAL|>
 
 `train_event.txt`
 
-The event labels include`<|BGM|>`、`<|Speech|>`、`<|Applause|>`、`<|Laughter|>`、`<|Cry|>`、`<|Sneeze|>`、`<|Breath|>` and `<|Cough|>`.
+The event labels include `<|BGM|>`、`<|Speech|>`、`<|Applause|>`、`<|Laughter|>`、`<|Cry|>`、`<|Sneeze|>`、`<|Breath|>` and `<|Cough|>`.
 
 ```bash
 BAC009S0764W0121 <|Speech|>
@@ -338,6 +346,7 @@ ID0012W0014 <|Speech|>
 ```
 
 `Command`
+
 ```shell
 # generate train.jsonl and val.jsonl from wav.scp, text.txt, text_language.txt, emo_target.txt, event_target.txt
 sensevoice2jsonl \
@@ -347,6 +356,7 @@ sensevoice2jsonl \
 ```
 
 If there is no `train_text_language.txt`, `train_emo_target.txt` and `train_event_target.txt`, the language, emotion and event label will be predicted automatically by using the `SenseVoice` model.
+
 ```shell
 # generate train.jsonl and val.jsonl from wav.scp and text.txt
 sensevoice2jsonl \
@@ -355,6 +365,7 @@ sensevoice2jsonl \
 ++jsonl_file_out="../../../data/list/train.jsonl" \
 ++model_dir='iic/SenseVoiceSmall'
 ```
+
 </details>
 
 ### Finetune
@@ -373,22 +384,24 @@ python webui.py
 
 <div align="center"><img src="image/webui.png" width="700"/> </div>
 
-
 ## Remarkable Third-Party Work
+
 - Triton (GPU) Deployment Best Practices: Using Triton + TensorRT, tested with FP32, achieving an acceleration ratio of 526 on V100 GPU. FP16 support is in progress. [Repository](https://github.com/modelscope/FunASR/blob/main/runtime/triton_gpu/README.md)
 - Sherpa-onnx Deployment Best Practices: Supports using SenseVoice in 10 programming languages: C++, C, Python, C#, Go, Swift, Kotlin, Java, JavaScript, and Dart. Also supports deploying SenseVoice on platforms like iOS, Android, and Raspberry Pi. [Repository](https://k2-fsa.github.io/sherpa/onnx/sense-voice/index.html)
 - [SenseVoice.cpp](https://github.com/lovemefan/SenseVoice.cpp). Inference of SenseVoice in pure C/C++ based on GGML, supporting 3-bit, 4-bit, 5-bit, 8-bit quantization, etc. with no third-party dependencies.
 - [streaming-sensevoice](https://github.com/pengzhendong/streaming-sensevoice) processes inference in chunks. To achieve pseudo-streaming, it employs a truncated attention mechanism, sacrificing some accuracy. Additionally, this technology supports CTC prefix beam search and hot-word boosting features.
-- [OmniSenseVoice](https://github.com/lifeiteng/OmniSenseVoice) is optimized for lightning-fast inference and batching process. 
+- [OmniSenseVoice](https://github.com/lifeiteng/OmniSenseVoice) is optimized for lightning-fast inference and batching process.
 
-<a name="Community"></a>
+`<a name="Community"></a>`
+
 # Community
+
 If you encounter problems in use, you can directly raise Issues on the github page.
 
 You can also scan the following DingTalk group QR code to join the community group for communication and discussion.
 
-|                          FunASR                          |
-|:--------------------------------------------------------:|
-| <img src="image/dingding_funasr.png" width="250"/></div> |
+|                            FunASR                            |
+| :----------------------------------------------------------: |
+| `<img src="image/dingding_funasr.png" width="250"/></div>` |
 
-
+[//]: #

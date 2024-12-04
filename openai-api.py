@@ -1,4 +1,3 @@
-
 import logging
 log_format = "%(asctime)s | %(process)d | %(levelname)s | %(filename)s:%(lineno)d | %(message)s"
 logging.basicConfig(level="INFO", format=log_format)
@@ -10,26 +9,24 @@ import torch
 import torchaudio
 import numpy as np
 from funasr import AutoModel
-from pathlib import Path
 from typing import Union
 from datetime import datetime
 from pydub import AudioSegment
+from model import SenseVoiceSmall
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException, status
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI()
 
-TMP_DIR = os.environ.get("TMP_DIR", os.path.join(os.path.expanduser("~"), "Downloads", "Audios"))
-os.makedirs(TMP_DIR, exist_ok=True)
-logging.info(f"临时目录已创建: {TMP_DIR}")
-
 # Initialize the model
-model = "iic/SenseVoiceSmall"
-model = AutoModel(
-    model=model,
+device = os.getenv("SENSEVOICE_DEVICE", "cpu")
+model_name = "iic/SenseVoiceSmall"
+model, init_kwargs = SenseVoiceSmall.from_pretrained(model=model_name,
     vad_model="iic/speech_fsmn_vad_zh-cn-16k-common-pytorch",
     vad_kwargs={"max_single_segment_time": 30000},
-    trust_remote_code=True,
-)
+    device=device)
+model.eval()
 
 emo_dict = {
     "<|HAPPY|>": "😊",
@@ -154,7 +151,7 @@ def format_str_v3(text: str, show_emo=True, show_event=True):
     return new_s.strip()
 
 
-def model_inference(input_wav, language, show_emo=True, show_event=True):
+def model_inference(input_wav, language, show_emo=True, show_event=True, output_timestamp=False):
     language = "auto" if len(language) < 1 else language
 
     if isinstance(input_wav, tuple):
@@ -169,27 +166,34 @@ def model_inference(input_wav, language, show_emo=True, show_event=True):
     if len(input_wav) == 0:
         raise ValueError("The provided audio is empty.")
 
-    merge_vad = True
-    text = model.generate(
-        input=input_wav,
-        cache={},
-        language=language,
+    asr_result = model.inference(
+        data_in=input_wav,
+        language=language, # "zh", "en", "yue", "ja", "ko", "nospeech"
         use_itn=True,
         batch_size_s=0,
-        merge_vad=merge_vad,
+        output_timestamp=output_timestamp,
+        **init_kwargs,
     )
 
-    text = text[0]["text"]
+    text = asr_result[0][0]["text"]
     text = format_str_v3(text, show_emo, show_event)
+    timestampInfo = None
+    if output_timestamp:
+        timestampInfo = asr_result[0][0]["timestamp"]
+    result = {
+        "text": text,
+    }
+    if timestampInfo:
+        result["timestamp"] = timestampInfo
 
-    return text
+    return result
 
-def audio2text(filename, language="auto"):
+
+def audio2text(file_obj, language="auto", timestamp=False):
     try:
         start_time = time.time()
-        
-        # 使用 pydub 加载音频
-        audio = AudioSegment.from_file(filename)
+        # 直接从文件对象读取音频
+        audio = AudioSegment.from_file(file_obj)
         y = np.array(audio.get_array_of_samples())
         sr = audio.frame_rate
 
@@ -202,40 +206,38 @@ def audio2text(filename, language="auto"):
         # 语音识别
         input_wav = (sr, y)
         recognition_start_time = time.time()
-        result = model_inference(input_wav=input_wav, language=language, show_emo=False)
+        result = model_inference(input_wav=input_wav, language=language, show_emo=False, output_timestamp=timestamp)
         recognition_time = time.time() - recognition_start_time
 
         # 计算音频时长（秒）
         audio_duration = len(audio) / 1000.0
-
-        logging.info(f"音频时长: {audio_duration:.2f}秒, 音频处理: {audio_processing_time:.2f}秒, 语音识别: {recognition_time:.2f}秒, 识别结果: {result}")
+        text = result.get("text", "")
+        logging.info(f"音频时长: {audio_duration:.2f}秒, 音频处理: {audio_processing_time:.2f}秒, 语音识别: {recognition_time:.2f}秒, 识别结果: {text}")
         return result
     except Exception as e:
-        logging.error(f"无法加载音频文件 {filename}, err：{str(e)}")
+        logging.error(f"无法加载音频文件, err：{str(e)}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"无法加载音频文件：{str(e)}")
 
+
+# 创建线程池，线程数可以根据CPU核心数和内存调整
+MAX_WORKERS = int(os.environ.get("MAX_WORKERS", "4"))
+thread_pool = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+
 @app.post("/v1/audio/transcriptions")
-async def transcriptions(file: Union[UploadFile, None] = File(default=None), language: str = Form(default="auto")):
+async def transcriptions(file: Union[UploadFile, None] = File(default=None),
+                         language: str = Form(default="auto"), timestamp: bool = Form(default=False)):
     if file is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="未提供文件")
 
-    # 生成带有时间信息的临时文件名
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_file_path = Path(TMP_DIR) / f"{timestamp}_{file.filename}"
-
     try:
-        # 保存上传的文件到临时目录
-        with temp_file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # 使用线程池异步执行音频处理任务
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(thread_pool, audio2text, file.file, language, timestamp)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-        # 调用 audio2text 进行文本识别
-        result = audio2text(str(temp_file_path), language=language)
-    finally:
-        # 删除临时文件
-        if temp_file_path.exists():
-            temp_file_path.unlink()
+    return result
 
-    return {"text": result}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
